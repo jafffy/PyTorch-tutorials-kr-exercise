@@ -128,19 +128,16 @@ imshow(out, title=[class_names[x] for x in classes])
 
 
 ######################################################################
-# Training the model
+# 모델 학습하기
 # ------------------
 #
-# Now, let's write a general function to train a model. Here, we will
-# illustrate:
+# 모델 학습을 위한 함수를 작성해 보겠습니다. 본 함수에서는 아래와 같은 기능을 수행합니다.
 #
-# -  Scheduling the learning rate
-# -  Saving the best model
+# - learning rate 를 스케쥴링
+# - 최적의 모델을 저장
 #
-# In the following, parameter ``scheduler`` is an LR scheduler object from
-# ``torch.optim.lr_scheduler``.
-
-
+# 아래의 코드에서 ``scheduler`` 라는 인자는 ``torch.optim.lr_scheduler`` 에 속하는 LR scheduler 오브젝트입니다.
+#
 def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
     since = time.time()
 
@@ -151,37 +148,37 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 10)
 
-        # Each epoch has a training and validation phase
+        # 각 epoch은 학습 단계와 평가 단계로 이루어집니다.
         for phase in ['train', 'val']:
             if phase == 'train':
-                model.train()  # Set model to training mode
+                model.train()  # 모델을 학습 모드로 변경
             else:
-                model.eval()   # Set model to evaluate mode
+                model.eval()   # 모델을 평가 모드로 변경
 
             running_loss = 0.0
             running_corrects = 0
 
-            # Iterate over data.
+            # 모든 데이터에 대해 반복합니다.
             for inputs, labels in dataloaders[phase]:
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
-                # zero the parameter gradients
+                # 파라미터 그래디언트를 0으로 설정
                 optimizer.zero_grad()
 
-                # forward
-                # track history if only in train
+                # 순전파
+                # 학습 단계일 때는 평가를 위한 이력을 추적합니다.
                 with torch.set_grad_enabled(phase == 'train'):
                     outputs = model(inputs)
                     _, preds = torch.max(outputs, 1)
                     loss = criterion(outputs, labels)
 
-                    # backward + optimize only if in training phase
+                    # 학습 단계일 때는 역전파 및 최적화 수행합니다.
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
 
-                # statistics
+                # 통계 수집
                 running_loss += loss.item() * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
             if phase == 'train':
@@ -193,7 +190,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
             print('{} Loss: {:.4f} Acc: {:.4f}'.format(
                 phase, epoch_loss, epoch_acc))
 
-            # deep copy the model
+            # 모델 깊은 복사
             if phase == 'val' and epoch_acc > best_acc:
                 best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
@@ -205,16 +202,16 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
         time_elapsed // 60, time_elapsed % 60))
     print('Best val Acc: {:4f}'.format(best_acc))
 
-    # load best model weights
+    # 최적 모델 가중치 로딩
     model.load_state_dict(best_model_wts)
     return model
 
 
 ######################################################################
-# Visualizing the model predictions
+# 모델 추론 결과 시각화 하기
 # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 #
-# Generic function to display predictions for a few images
+# 본 함수는 모델 추론의 결과 예시를 시각화합니다.
 #
 
 def visualize_model(model, num_images=6):
@@ -244,34 +241,33 @@ def visualize_model(model, num_images=6):
         model.train(mode=was_training)
 
 ######################################################################
-# Finetuning the convnet
+# convnet 파인 튜닝 하기
 # ----------------------
 #
-# Load a pretrained model and reset final fully connected layer.
+# 미리 학습된 (pretrained) 모델을 로딩한 후, 마지막 FC 레이어만 커스터마이즈합니다.
 #
 
 model_ft = models.resnet18(pretrained=True)
 num_ftrs = model_ft.fc.in_features
-# Here the size of each output sample is set to 2.
-# Alternatively, it can be generalized to nn.Linear(num_ftrs, len(class_names)).
+# 이 예제에서는 출력 차원의 크기를 2로 설정합니다.
+# 만약에 일반화해서 표현하고 싶다면 nn.Linear(num_ftrs, len(class_names)) 와 같이 표현 가능합니다.
 model_ft.fc = nn.Linear(num_ftrs, 2)
 
 model_ft = model_ft.to(device)
 
 criterion = nn.CrossEntropyLoss()
 
-# Observe that all parameters are being optimized
+# model_ft의 모든 파라미터가 최적화
 optimizer_ft = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9)
 
-# Decay LR by a factor of 0.1 every 7 epochs
+# 7 epochs 마다 LR을 기존의 0.1만큼으로 설정
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
 ######################################################################
-# Train and evaluate
+# 학습 및 평가
 # ^^^^^^^^^^^^^^^^^^
 #
-# It should take around 15-25 min on CPU. On GPU though, it takes less than a
-# minute.
+# 학습은 CPU 학습시 15-25분 정도 걸립니다. GPU로 학습할 경우 1분 이내로 학습이 완료됩니다.
 #
 
 model_ft = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler,
@@ -284,22 +280,23 @@ visualize_model(model_ft)
 
 
 ######################################################################
-# ConvNet as fixed feature extractor
+# 고정된 특정 추출기로서의 ConvNet
 # ----------------------------------
 #
-# Here, we need to freeze all the network except the final layer. We need
-# to set ``requires_grad == False`` to freeze the parameters so that the
-# gradients are not computed in ``backward()``.
+# 이번에는 마지막 레이어 외의 모든 레이어들을 얼려봅시다. 얼려진 레이어들의 파라미터들은 ``backward()`` 함수가
+# 호출되더라도 해당 레이어들의 그래디언트는 계산되지 않습니다. 특정 파라미터를 얼리기 위해서는 ``requires_grad == False``를
+# 호출하면 됩니다.
 #
-# You can read more about this in the documentation
-# `here <https://pytorch.org/docs/notes/autograd.html#excluding-subgraphs-from-backward>`__.
+# 더 자세한 내용은
+# `이 문서 <https://pytorch.org/docs/notes/autograd.html#excluding-subgraphs-from-backward>`_
+# 를 참고하세요.
 #
 
 model_conv = torchvision.models.resnet18(pretrained=True)
 for param in model_conv.parameters():
     param.requires_grad = False
 
-# Parameters of newly constructed modules have requires_grad=True by default
+# 새로 정의된 모듈의 파라미터들은 기본적으로 requires_grad=True의 속성을 갖습니다.
 num_ftrs = model_conv.fc.in_features
 model_conv.fc = nn.Linear(num_ftrs, 2)
 
@@ -307,21 +304,19 @@ model_conv = model_conv.to(device)
 
 criterion = nn.CrossEntropyLoss()
 
-# Observe that only parameters of final layer are being optimized as
-# opposed to before.
+# 옵티마이저는 마지막 레이어의 파라미터들만 최적화합니다.
 optimizer_conv = optim.SGD(model_conv.fc.parameters(), lr=0.001, momentum=0.9)
 
-# Decay LR by a factor of 0.1 every 7 epochs
+# 7 epochs 마다 LR을 기존의 0.1만큼으로 설정합니다.
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
 
 
 ######################################################################
-# Train and evaluate
+# 학습 및 평가
 # ^^^^^^^^^^^^^^^^^^
 #
-# On CPU this will take about half the time compared to previous scenario.
-# This is expected as gradients don't need to be computed for most of the
-# network. However, forward does need to be computed.
+# 본 예제에서는 위 예제에서 걸린 시간의 절반 정도의 시간만 소요됩니다. (CPU 기준)
+# 순전파는 그대로 계산되는 되지만, 대부분의 파라미터들의 그래디언트가 계산되지 않기 때문입니다.
 #
 
 model_conv = train_model(model_conv, criterion, optimizer_conv,
@@ -336,11 +331,11 @@ plt.ioff()
 plt.show()
 
 ######################################################################
-# Further Learning
+# 읽을 거리
 # -----------------
 #
-# If you would like to learn more about the applications of transfer learning,
-# checkout our `Quantized Transfer Learning for Computer Vision Tutorial <https://pytorch.org/tutorials/intermediate/quantized_transfer_learning_tutorial.html>`_.
+# 만약 transfer learning의 응용에 대해서 더 알고 싶다면
+# `Quantized Transfer Learning for Computer Vision Tutorial <https://pytorch.org/tutorials/intermediate/quantized_transfer_learning_tutorial.html>`_ 를 참고하세요.
 #
 #
 
