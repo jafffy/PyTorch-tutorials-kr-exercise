@@ -133,10 +133,10 @@ imshow(out, title=[class_names[x] for x in classes])
 #
 # 모델 학습을 위한 함수를 작성해 보겠습니다. 본 함수에서는 아래와 같은 기능을 수행합니다.
 #
-# - learning rate 를 스케쥴링
+# - 학습률을 스케쥴링
 # - 최적의 모델을 저장
 #
-# 아래의 코드에서 ``scheduler`` 라는 인자는 ``torch.optim.lr_scheduler`` 에 속하는 LR scheduler 오브젝트입니다.
+# 아래의 코드에서 ``scheduler`` 라는 인자는 ``torch.optim.lr_scheduler`` 에 속하는 학습률 스케쥴러 객체입니다.
 #
 def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
     since = time.time()
@@ -163,7 +163,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
-                # 파라미터 그래디언트를 0으로 설정
+                # 파라미터 변화도를 0으로 설정
                 optimizer.zero_grad()
 
                 # 순전파
@@ -173,7 +173,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
                     _, preds = torch.max(outputs, 1)
                     loss = criterion(outputs, labels)
 
-                    # 학습 단계일 때는 역전파 및 최적화 수행합니다.
+                    # 학습 단계일 때는 역전파 및 최적화를 수행합니다.
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
@@ -202,7 +202,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
         time_elapsed // 60, time_elapsed % 60))
     print('Best val Acc: {:4f}'.format(best_acc))
 
-    # 최적 모델 가중치 로딩
+    # 최적 모델 가중치 불러오기
     model.load_state_dict(best_model_wts)
     return model
 
@@ -244,7 +244,7 @@ def visualize_model(model, num_images=6):
 # convnet 파인 튜닝 하기
 # ----------------------
 #
-# 미리 학습된 (pretrained) 모델을 로딩한 후, 마지막 FC 레이어만 커스터마이즈합니다.
+# 미리 학습된 (pretrained) 모델을 로딩한 후, 마지막 fully connected 레이어만 커스터마이즈합니다.
 #
 
 model_ft = models.resnet18(pretrained=True)
@@ -283,8 +283,8 @@ visualize_model(model_ft)
 # 고정된 특정 추출기로서의 ConvNet
 # ----------------------------------
 #
-# 이번에는 마지막 레이어 외의 모든 레이어들을 얼려봅시다. 얼려진 레이어들의 파라미터들은 ``backward()`` 함수가
-# 호출되더라도 해당 레이어들의 그래디언트는 계산되지 않습니다. 특정 파라미터를 얼리기 위해서는 ``requires_grad == False``를
+# 이번에는 마지막 레이어 외의 모든 레이어들의 파라미터들을 고정시켜봅시다. 고정된 레이어들의 파라미터들은 ``backward()`` 함수가
+# 호출되더라도 해당 레이어들의 변화도는 계산되지 않습니다. 특정 파라미터를 고정 시키기 위해서는 ``requires_grad == False``를
 # 호출하면 됩니다.
 #
 # 더 자세한 내용은
@@ -316,7 +316,7 @@ exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
 # ^^^^^^^^^^^^^^^^^^
 #
 # 본 예제에서는 위 예제에서 걸린 시간의 절반 정도의 시간만 소요됩니다. (CPU 기준)
-# 순전파는 그대로 계산되는 되지만, 대부분의 파라미터들의 그래디언트가 계산되지 않기 때문입니다.
+# 순전파는 그대로 계산되는 되지만, 대부분의 파라미터들의 변화도가 계산되지 않기 때문입니다.
 #
 
 model_conv = train_model(model_conv, criterion, optimizer_conv,
